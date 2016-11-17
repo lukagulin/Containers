@@ -2,8 +2,8 @@
 #include <vector>
 #include <string>
 #include <Windows.h>
-#include <algorithm>
 
+#define MAX(a,b) (((a) > (b))? (a) : (b))
 
 using namespace std;
 
@@ -14,7 +14,32 @@ inline bool extractBit(CARRIER broj, int pos)
 	return bool((broj >> pos) & 1);
 }
 
-string Zbroji(string prvi, string drugi)
+
+class UMultiPrec {
+private:
+	vector<CARRIER> bits;
+	static string Zbroji(string prvi, string drugi);
+	static vector<string> pot2VEC(vector<int> pot);
+
+public:
+	UMultiPrec() {
+		bits.push_back(0);
+	}
+	UMultiPrec(CARRIER var) {
+		bits.push_back(var);
+	}
+	UMultiPrec(const UMultiPrec& var) {
+		bits = var.bits;
+	}
+
+	UMultiPrec operator+(const UMultiPrec&);
+
+	string toString();
+
+
+};
+
+string UMultiPrec::Zbroji(string prvi, string drugi)
 {
 	int ost = 0;
 	string Zbroj;
@@ -55,7 +80,7 @@ string Zbroji(string prvi, string drugi)
 
 	return Zbroj;
 }
-vector<string> pot2VEC(vector<int> pot)
+vector<string> UMultiPrec::pot2VEC(vector<int> pot)
 {
 	vector<string> rezultat;
 	if (pot.size() == 0)
@@ -95,70 +120,49 @@ vector<string> pot2VEC(vector<int> pot)
 	return rezultat;
 }
 
-
-
-class UMultiPrec {
-	
-
-public:
-	vector<CARRIER> bits;
-	UMultiPrec() {
-		bits.push_back(0);
-	}
-	UMultiPrec(CARRIER var) {
-		bits.push_back(var);
-	}
-	UMultiPrec(const UMultiPrec& var) {
-		bits = var.bits;
-	}
-
-
-	string toString()
-	{
-		vector<int> Positions;
-		string izlaz = "0";
-		izlaz[0] -= '0';
-
-		for (int i = 0; i < bits.size(); i++)
-			for (int j = 0; j < sizeof(CARRIER) * 8; j++)
-				if (extractBit(bits[i], j))
-					Positions.push_back(i*(sizeof(CARRIER) * 8) + j);
-
-
-		vector<string> Values = pot2VEC(Positions);
-
-		for (unsigned int i = 0, size = Values.size(); i < size; i++)
-		{
-			izlaz = Zbroji(izlaz, Values[i]);
-		}
-
-		reverse(izlaz.begin(), izlaz.end());
-
-		for (unsigned int i = 0, size = izlaz.size(); i < size; i++)
-		{
-			izlaz[i] += '0';
-		}
-
-		return izlaz;
-	}
-
-
-};
-
-UMultiPrec add(const UMultiPrec& first, const UMultiPrec& second)
+UMultiPrec UMultiPrec::operator+(const UMultiPrec& var)
 {
-	UMultiPrec zbroj(first);
-	zbroj.bits.resize(max(first.bits.size(), second.bits.size()) + 1);
-	for (int i = 0, size = second.bits.size(); i < size; i++)
+	UMultiPrec zbroj;
+	zbroj.bits = bits;
+	zbroj.bits.resize(MAX(bits.size(), var.bits.size()) + 1);
+	for (int i = 0, size = var.bits.size(); i < size; i++)
 	{
-		zbroj.bits[i] = first.bits[i] + second.bits[i];
-		if (zbroj.bits[i] < first.bits[i] || zbroj.bits[i] < second.bits[i])
+		zbroj.bits[i] = bits[i] + var.bits[i];
+		if (zbroj.bits[i] < bits[i] || zbroj.bits[i] < var.bits[i])
 			zbroj.bits[i + 1]++;
 	}
 	if (zbroj.bits.back() == 0)
 		zbroj.bits.pop_back();
 
 	return zbroj;
+}
+string UMultiPrec::toString()
+{
+	vector<int> Positions;
+	string izlaz = "0";
+	izlaz[0] -= '0';
+
+	for (int i = 0; i < bits.size(); i++)
+		for (int j = 0; j < sizeof(CARRIER) * 8; j++)
+			if (extractBit(bits[i], j))
+				Positions.push_back(i*(sizeof(CARRIER) * 8) + j);
+
+
+	vector<string> Values = pot2VEC(Positions);
+
+	for (unsigned int i = 0, size = Values.size(); i < size; i++)
+	{
+		izlaz = Zbroji(izlaz, Values[i]);
+	}
+
+	reverse(izlaz.begin(), izlaz.end());
+
+	for (unsigned int i = 0, size = izlaz.size(); i < size; i++)
+	{
+		izlaz[i] += '0';
+	}
+
+	return izlaz;
 }
 
 UMultiPrec FibonacciL(int n)
@@ -171,10 +175,16 @@ UMultiPrec FibonacciL(int n)
 	s[1] = 1;
 	for (int i = 2; i < n; i++)
 	{
-		s[i % 3] = add(s[(i - 1) % 3], s[(i - 2) % 3]);
+		s[i % 3] = s[(i - 1) % 3] + s[(i - 2) % 3];
 	}
 
 	return s[(n - 1) % 3];
+}
+
+ostream& operator<<(ostream& os, UMultiPrec& var)
+{
+	os << var.toString();
+	return os;
 }
 
 int main()
@@ -182,8 +192,7 @@ int main()
 	auto start = GetTickCount();
 	auto fib = FibonacciL(5000);
 	cout << GetTickCount() - start << endl;
-	cout << fib.toString() << endl;
-	
+	cout << fib << endl;
 	cout << endl;
 
 	system("pause");
