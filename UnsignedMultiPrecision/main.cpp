@@ -3,6 +3,7 @@
 #include <string>
 #include <Windows.h>
 #include <thread>
+#include <algorithm>
 
 #define MAX(a,b) (((a) > (b))? (a) : (b))
 #define MIN(a,b) (((a) < (b))? (a) : (b))
@@ -42,17 +43,17 @@ public:
 	//Uint10 operator-- (int);
 
 	bool operator==(const UMultiPrec&);
-	bool operator==(const CARRIER&);
+	inline bool operator==(const CARRIER&);
 	bool operator!=(const UMultiPrec&);
-	bool operator!=(const CARRIER&);
+	inline bool operator!=(const CARRIER&);
 	bool operator>(const UMultiPrec&);
-	bool operator>(const CARRIER&);
+	inline bool operator>(const CARRIER&);
 	bool operator<(const UMultiPrec&);
-	bool operator<(const CARRIER&);
+	inline bool operator<(const CARRIER&);
 	bool operator>=(const UMultiPrec&);
-	bool operator>=(const CARRIER&);
+	inline bool operator>=(const CARRIER&);
 	bool operator<=(const UMultiPrec&);
-	bool operator<=(const CARRIER&);
+	inline bool operator<=(const CARRIER&);
 	
 
 	string toString();
@@ -494,7 +495,9 @@ UMultiPrec FibonacciL(int n)
 int main()
 {
 	auto start = GetTickCount();
-	auto fib = FibonacciL(20000);
+	int n;
+	cin >> n;
+	auto fib = FibonacciL(n);
 	cout << GetTickCount() - start << endl;
 	cout << fib << endl;
 	cout << GetTickCount() - start << endl;
