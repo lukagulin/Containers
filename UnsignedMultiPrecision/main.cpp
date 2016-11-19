@@ -10,7 +10,7 @@
 
 using namespace std;
 
-typedef unsigned int CARRIER;
+typedef unsigned long long int CARRIER;
 inline bool extractBit(CARRIER broj, int pos) 
 {
 	return bool((broj >> pos) & 1);
@@ -21,7 +21,7 @@ class UMultiPrec {
 private:
 	vector<CARRIER> bits;
 	static string Zbroji(string prvi, string drugi);
-	static vector<string> pot2VEC(vector<unsigned int> pot);
+	static vector<string> pot2VEC(vector<size_t> pot);
 
 public:
 	UMultiPrec() {
@@ -32,6 +32,10 @@ public:
 	}
 	UMultiPrec(const UMultiPrec& var) {
 		bits = var.bits;
+	}
+	UMultiPrec& operator=(const UMultiPrec& var) {
+		UMultiPrec(var);
+		return *this;
 	}
 
 	UMultiPrec operator+(const UMultiPrec&);
@@ -72,7 +76,7 @@ string UMultiPrec::Zbroji(string prvi, string drugi)
 
 	Zbroj.resize(prvi.size());
 
-	for (unsigned int i = 0; i < prvi.size(); i++)
+	for (size_t i = 0; i < prvi.size(); i++)
 	{
 		if (i < drugi.size())
 		{
@@ -102,7 +106,7 @@ string UMultiPrec::Zbroji(string prvi, string drugi)
 
 	return Zbroj;
 }
-vector<string> UMultiPrec::pot2VEC(vector<unsigned int> pot)
+vector<string> UMultiPrec::pot2VEC(vector<size_t> pot)
 {
 	vector<string> rezultat;
 	if (pot.size() == 0)
@@ -114,7 +118,7 @@ vector<string> UMultiPrec::pot2VEC(vector<unsigned int> pot)
 	broj.resize(1);
 	broj[0] = 1;
 	rezultat.resize(pot.size());
-	for (unsigned int i = 0; i <= max; i++)
+	for (size_t i = 0; i <= max; i++)
 	{
 		if (i == pot[br])
 		{
@@ -123,7 +127,7 @@ vector<string> UMultiPrec::pot2VEC(vector<unsigned int> pot)
 			br++;
 		}
 		save = 0;
-		for (int j = 0, size = broj.size(); j < size; j++)
+		for (size_t j = 0, size = broj.size(); j < size; j++)
 		{
 			broj[j] = 2 * broj[j] + save;
 			if (broj[j] >= 10)
@@ -150,7 +154,7 @@ UMultiPrec UMultiPrec::operator+(const UMultiPrec& var)
 	UMultiPrec zbroj;
 	zbroj.bits = bits;
 	zbroj.bits.push_back(0);
-	int j, size = var.bits.size();
+	size_t j, size = var.bits.size();
 	bool* overflow;
 
 	overflow = new bool[size];
@@ -158,24 +162,40 @@ UMultiPrec UMultiPrec::operator+(const UMultiPrec& var)
 	for (int i = 0; i < size; i++)
 		overflow[i] = false;
 
-
-	vector<thread> thrs;
-	int N_thrs = MIN(size / 10000 + 1, 10);
-	for (int i = 0; i < N_thrs; i++)
+	if (size < 10000)
 	{
-		thrs.push_back(thread([&, i] {
-			for (int j = int(((float)size / N_thrs - 1)*i); j < int(((float)size / N_thrs)*(i + 1)); j++)
-			{
-				zbroj.bits[j] = bits[j] + var.bits[j];
-				if (zbroj.bits[j] < bits[j] || zbroj.bits[j] < var.bits[j])
-					overflow[j] = true;
-			}
-		}));
+		for (int j = 0; j < size; j++)
+		{
+			zbroj.bits[j] = bits[j] + var.bits[j];
+			if (zbroj.bits[j] < bits[j] || zbroj.bits[j] < var.bits[j])
+				overflow[j] = true;
+		}
+
 	}
-
-	for (auto& thr : thrs)
+	else
 	{
-		thr.join();
+
+		thread *thrs;
+		size_t N_thrs = MIN(size / 10000 + 1, 10);
+		thrs = new thread[N_thrs];
+		for (size_t i = 0; i < N_thrs; i++)
+		{
+			thrs[i] = thread([&, i] {
+				for (size_t j = size_t(((float)size / N_thrs - 1)*i); j < size_t(((float)size / N_thrs)*(i + 1)); j++)
+				{
+					zbroj.bits[j] = bits[j] + var.bits[j];
+					if (zbroj.bits[j] < bits[j] || zbroj.bits[j] < var.bits[j])
+						overflow[j] = true;
+				}
+			});
+		}
+
+		for (int i = 0; i < N_thrs; i++)
+		{
+			thrs[i].join();
+		}
+
+		delete[] thrs;
 	}
 
 	for (int i = 0; i < size; i++)
@@ -202,38 +222,57 @@ UMultiPrec& UMultiPrec::operator+=(const UMultiPrec& var)
 		bits.push_back(0);
 
 	bits.push_back(0);
-	int j, size = var.bits.size();
+	size_t j, size = var.bits.size();
 	bool* overflow;
 
 	overflow = new bool[size];
 
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 		overflow[i] = false;
 
-
-	vector<thread> thrs;
-	int N_thrs = MIN(size / 10000 + 1, 10);
-	for (int i = 0; i < N_thrs; i++)
+	if (size < 10000)
 	{
-		thrs.push_back(thread([&, i] {
-			CARRIER tmp;
-			for (int j = int(((float)size / N_thrs - 1)*i); j < int(((float)size / N_thrs)*(i + 1)); j++)
-			{
-				tmp = bits[j] + var.bits[j];
-				if (tmp < bits[j] || tmp < var.bits[j])
-					overflow[j] = true;
+		CARRIER tmp;
+		for (size_t j = 0; j < size; j++)
+		{
+			tmp = bits[j] + var.bits[j];
+			if (tmp < bits[j] || tmp < var.bits[j])
+				overflow[j] = true;
 
-				bits[j] = tmp;
-			}
-		}));
+			bits[j] = tmp;
+		}
+
+	}
+	else
+	{
+		thread *thrs;
+		size_t N_thrs = MIN(size / 10000 + 1, 10);
+		thrs = new thread[N_thrs];
+
+		for (size_t i = 0; i < N_thrs; i++)
+		{
+			thrs[i] = thread([&, i] {
+				CARRIER tmp;
+				for (size_t j = size_t(((float)size / N_thrs - 1)*i); j < size_t(((float)size / N_thrs)*(i + 1)); j++)
+				{
+					tmp = bits[j] + var.bits[j];
+					if (tmp < bits[j] || tmp < var.bits[j])
+						overflow[j] = true;
+
+					bits[j] = tmp;
+				}
+			});
+		}
+
+		for (size_t i = 0; i < N_thrs; i++)
+		{
+			thrs[i].join();
+		}
+
+		delete[] thrs;
 	}
 
-	for (auto& thr : thrs)
-	{
-		thr.join();
-	}
-
-	for (int i = 0; i < size; i++)
+	for (size_t i = 0; i < size; i++)
 	{
 		if (overflow[i])
 		{
@@ -275,7 +314,7 @@ bool UMultiPrec::operator==(const UMultiPrec& var)
 	if (bits.size() != var.bits.size())
 		return false;
 
-	for (int i = 0, size = bits.size(); i < size; i++)
+	for (size_t i = 0, size = bits.size(); i < size; i++)
 	{
 		if (bits[i] != var.bits[i])
 			return false;
@@ -293,7 +332,7 @@ bool UMultiPrec::operator!=(const UMultiPrec& var)
 	if (bits.size() != var.bits.size())
 		return true;
 
-	for (int i = 0, size = bits.size(); i < size; i++)
+	for (size_t i = 0, size = bits.size(); i < size; i++)
 	{
 		if (bits[i] != var.bits[i])
 			return true;
@@ -316,7 +355,7 @@ bool UMultiPrec::operator>(const UMultiPrec& var)
 
 	else
 	{
-		for (int i = bits.size() - 1; i >= 0; i--)
+		for (size_t i = bits.size() - 1; i >= 0; i--)
 		{
 			if (bits[i] > var.bits[i])
 				return true;
@@ -341,7 +380,7 @@ bool UMultiPrec::operator>=(const UMultiPrec& var)
 
 	else
 	{
-		for (int i = bits.size() - 1; i >= 0; i--)
+		for (size_t i = bits.size() - 1; i >= 0; i--)
 		{
 			if (bits[i] > var.bits[i])
 				return true;
@@ -366,7 +405,7 @@ bool UMultiPrec::operator<(const UMultiPrec& var)
 
 	else
 	{
-		for (int i = bits.size() - 1; i >= 0; i--)
+		for (size_t i = bits.size() - 1; i >= 0; i--)
 		{
 			if (bits[i] < var.bits[i])
 				return true;
@@ -391,7 +430,7 @@ bool UMultiPrec::operator<=(const UMultiPrec& var)
 
 	else
 	{
-		for (int i = bits.size() - 1; i >= 0; i--)
+		for (size_t i = bits.size() - 1; i >= 0; i--)
 		{
 			if (bits[i] < var.bits[i])
 				return true;
@@ -413,44 +452,49 @@ bool UMultiPrec::operator<=(const CARRIER& var)
 string UMultiPrec::toString()
 {
 
-	vector<unsigned int> Positions;
+	vector<size_t> Positions;
 	string izlaz = "0";
 	izlaz[0] -= '0';
 
-	for (unsigned int i = 0; i < bits.size(); i++)
-		for (unsigned int j = 0; j < sizeof(CARRIER) * 8; j++)
+	for (size_t i = 0; i < bits.size(); i++)
+		for (size_t j = 0; j < sizeof(CARRIER) * 8; j++)
 			if (extractBit(bits[i], j))
 				Positions.push_back(i*(sizeof(CARRIER) * 8) + j);
 
 
 	vector<string> Values = pot2VEC(Positions);
 
-	int N_thrs = MIN(Values.size()/1000 + 1, 15);
-	vector<string> tmpIzlaz(N_thrs);
-	vector<thread> thrs;
-	for (auto& izl : tmpIzlaz)
+	size_t N_thrs = MIN(Values.size()/1000 + 1, 15);
+	string *tmpIzlaz;
+	thread *thrs;
+
+	tmpIzlaz = new string[N_thrs];
+	thrs = new thread[N_thrs];
+	for (int i = 0; i < N_thrs; i++)
 	{
-		izl = "0";
-		izl[0] -= '0';
+		tmpIzlaz[i] = "0";
+		tmpIzlaz[i][0] -= '0';
 	}
 
-	int vel = Values.size();
+	size_t vel = Values.size();
 
-	for (int i = 0; i < N_thrs; i++)
-		thrs.push_back(thread([&, i] {
-		for (int j = int(((float)vel / N_thrs - 1)*i); j < int(((float)vel / N_thrs)*(i + 1)); j++)
+	for (size_t i = 0; i < N_thrs; i++)
+		thrs[i] = thread([&, i] {
+		for (size_t j = size_t(((float)vel / N_thrs - 1)*i); j < size_t(((float)vel / N_thrs)*(i + 1)); j++)
 		{
 			tmpIzlaz[i] = Zbroji(tmpIzlaz[i], Values[j]);
 		}
 
-	}));
+	});
 
-	for (auto& thr : thrs)
-		thr.join();
+	for (size_t i = 0; i < N_thrs; i++)
+		thrs[i].join();
 
-	for (auto& tmpI : tmpIzlaz)
-		izlaz = Zbroji(tmpI, izlaz);
+	for (size_t i = 0; i < N_thrs; i++)
+		izlaz = Zbroji(tmpIzlaz[i], izlaz);
 
+	delete[] thrs;
+	delete[] tmpIzlaz;
 
 	/*for (unsigned int i = 0, size = Values.size(); i < size; i++)
 	{
@@ -459,7 +503,7 @@ string UMultiPrec::toString()
 
 	reverse(izlaz.begin(), izlaz.end());
 
-	for (unsigned int i = 0, size = izlaz.size(); i < size; i++)
+	for (size_t i = 0, size = izlaz.size(); i < size; i++)
 	{
 		izlaz[i] += '0';
 	}
