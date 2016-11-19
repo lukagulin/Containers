@@ -1,6 +1,5 @@
 #include <iostream>
 #include "VectorListHybrid.h"
-#include "VLHIterator.h"
 
 int main()
 {
@@ -18,7 +17,6 @@ int main()
 	for (VectorListHybrid<int>::const_VLHIterator it = prvi.cbegin(); it != prvi.cend(); it++)
 	{
 		VectorListHybrid<int>::VLHIterator iter = it;
-		VectorListHybrid<int>::const_VLHIterator itit = iter;
 		std::cout << *it << std::endl;
 	}
 	system("pause");
