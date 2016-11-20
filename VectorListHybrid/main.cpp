@@ -4,9 +4,8 @@
 int main()
 {
 
-
 	VectorListHybrid<int> prvi(2);
-	for (int i = 0; i < 1452; i++)
+	for (int i = 0; i < 12; i++)
 	{
 		prvi.push_back(i*i);
 	}
