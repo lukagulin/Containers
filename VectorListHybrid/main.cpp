@@ -4,7 +4,7 @@
 int main()
 {
 	VectorListHybrid<int> prvi(2);
-	for (int i = 0; i < 12; i++)
+	for (int i = 0; i < 1452; i++)
 	{
 		prvi.push_back(i*i);
 	}
@@ -14,9 +14,8 @@ int main()
 	}
 
 
-	for (VectorListHybrid<int>::const_VLHIterator it = prvi.cbegin(); it != prvi.cend(); it++)
+	for (VectorListHybrid<int>::const_iterator it = prvi.cbegin(); it != prvi.cend(); it++)
 	{
-		VectorListHybrid<int>::VLHIterator iter = it;
 		std::cout << *it << std::endl;
 	}
 	system("pause");

@@ -1,5 +1,5 @@
 #pragma once
-#include<exception>
+#include <stdexcept>
 
 template <typename T>
 class VectorListHybrid
@@ -36,12 +36,13 @@ public:
 	
 	T& operator[](const int&);
 	int size();
+	template <typename U>
 	class VLHIterator : public std::iterator<std::input_iterator_tag, VectorListHybrid<T> >
 	{
-	protected:
+	private:
 		int inBlock;
 		int inSet;
-		T *p;
+		U *p;
 		const VectorListHybrid<T>& vlh;
 	public:
 		VLHIterator(const VectorListHybrid<T>&);
@@ -51,33 +52,26 @@ public:
 		VLHIterator operator++(int);
 		bool operator==(const VLHIterator& rhs);
 		bool operator!=(const VLHIterator& rhs);
-		int& operator*();
+		U& operator*();
 		~VLHIterator();
 	};
-	class const_VLHIterator : public VLHIterator
-	{
-	public:
-		using VLHIterator::VLHIterator;
-		const int& operator*()
-		{
-			return *p;
-		}
-	};
+	typedef typename VLHIterator<T> iterator;
+	typedef typename VLHIterator<const T> const_iterator;
 
-	typename VLHIterator begin();
-	typename VLHIterator end();
+	iterator begin();
+	const_iterator cbegin() const;
+	iterator end();
+	const_iterator cend() const;
 
-	typename const_VLHIterator cbegin() const;
-	typename const_VLHIterator cend() const;
 };
 
-template<typename T>
+template <typename T> 
 bool VectorListHybrid<T>::isPowerOf2(int n)
 {
 	return (n > 0 && ((n & (n - 1)) == 0));
 }
 
-template<typename T>
+template <typename T> 
 int VectorListHybrid<T>::determineBlock(int index)
 {
 	index += 1;
@@ -90,7 +84,7 @@ int VectorListHybrid<T>::determineBlock(int index)
 	return counter;
 }
 
-template <typename T>
+template <typename T> 
 VectorListHybrid<T>::VectorListHybrid()
 {
 	_capacity = DEFAULT_CAPACITY;
@@ -104,7 +98,7 @@ VectorListHybrid<T>::VectorListHybrid()
 	_blocksReserved = 0;
 }
 
-template <typename T>
+template <typename T> 
 VectorListHybrid<T>::VectorListHybrid(int capacity)
 {
 	_size = 0;
@@ -141,7 +135,7 @@ VectorListHybrid<T>::~VectorListHybrid()
 	delete[] data;
 }
 
-template<typename T>
+template <typename T>
 VectorListHybrid<T>::VectorListHybrid(const VectorListHybrid& var)
 {
 	_capacity = var._capacity;
@@ -159,14 +153,14 @@ VectorListHybrid<T>::VectorListHybrid(const VectorListHybrid& var)
 
 }
 
-template<typename T>
+template <typename T>
 VectorListHybrid<T>& VectorListHybrid<T>::operator=(const VectorListHybrid& var)
 {
 	VectorListHybrid(var);
 	return *this;
 }
 
-template<typename T>
+template <typename T>
 void VectorListHybrid<T>::push_back(const T& var)
 {
 	int inBlock = determineBlock(_size);
@@ -202,11 +196,11 @@ void VectorListHybrid<T>::push_back(const T& var)
 
 }
 
-template<typename T>
+template <typename T>
 void VectorListHybrid<T>::pop_back()
 {
 	if (_size == 0)
-		throw std::exception("Already empty!");
+		throw std::length_error("Empty!");
 
 	/*if (isPowerOf2(_size))
 	{
@@ -219,25 +213,25 @@ void VectorListHybrid<T>::pop_back()
 	_size--;
 }
 
-template<typename T>
+template <typename T>
 T & VectorListHybrid<T>::front()
 {
 	if (_size == 0)
-		throw std::exception("Empty!");
+		throw std::length_error("Empty!");
 
 	return data[0][0];
 }
 
-template<typename T>
+template <typename T>
 T & VectorListHybrid<T>::back()
 {
 	if (_size == 0)
-		throw std::exception("Empty!");
+		throw std::length_error("Empty!");
 
 	return data[_blocksUsed - 1][_size - (1 << (_blocksUsed - 1))];
 }
 
-template<typename T>
+template <typename T>
 void VectorListHybrid<T>::resize(const int&newsize, const T& var = 0)
 {
 	if (newsize < _size)
@@ -306,13 +300,13 @@ void VectorListHybrid<T>::resize(const int&newsize, const T& var = 0)
 	}
 }
 
-template<typename T>
+template <typename T>
 inline void VectorListHybrid<T>::resize(const int & newsize)
 {
 	resize(newsize, 0);
 }
 
-template<typename T>
+template <typename T>
 void VectorListHybrid<T>::reserve(const int & maxsize)
 {
 	int newBlock = determineBlock(maxsize - 1);
@@ -354,7 +348,7 @@ void VectorListHybrid<T>::reserve(const int & maxsize)
 
 }
 
-template<typename T>
+template <typename T>
 void VectorListHybrid<T>::shrink_to_fit()
 {
 	for (int i = _blocksUsed; i < _blocksReserved; i++)
@@ -365,7 +359,7 @@ void VectorListHybrid<T>::shrink_to_fit()
 	_blocksReserved = _blocksUsed;
 }
 
-template<typename T>
+template <typename T>
 void VectorListHybrid<T>::clear()
 {
 	_size = 0;
@@ -373,70 +367,73 @@ void VectorListHybrid<T>::clear()
 	shrink_to_fit();
 }
 
-template<typename T>
+template <typename T>
 bool VectorListHybrid<T>::empty()
 {
 	return size == 0;
 }
 
-template<typename T>
-typename VectorListHybrid<T>::VLHIterator VectorListHybrid<T>::begin()
+template <typename T>
+typename VectorListHybrid<T>::iterator VectorListHybrid<T>::begin()
 {
-	return VectorListHybrid<T>::VLHIterator(*this);
+	return VectorListHybrid<T>::iterator(*this);
 }
 
-template<typename T>
-typename VectorListHybrid<T>::VLHIterator VectorListHybrid<T>::end()
+template <typename T>
+typename VectorListHybrid<T>::iterator VectorListHybrid<T>::end()
 {
 	if (determineBlock(_size) == _blocksUsed)
-		return VectorListHybrid<T>::VLHIterator(*this, _blocksUsed, 0);
+		return VectorListHybrid<T>::iterator(*this, _blocksUsed, 0);
 	else
-		return VectorListHybrid<T>::VLHIterator(*this, _blocksUsed - 1, _size - (1 << (_blocksUsed - 1)) + 1);
+		return VectorListHybrid<T>::iterator(*this, _blocksUsed - 1, _size - (1 << (_blocksUsed - 1)) + 1);
 }
 
-template<typename T>
-inline typename VectorListHybrid<T>::const_VLHIterator VectorListHybrid<T>::cbegin() const
+template <typename T>
+inline typename VectorListHybrid<T>::const_iterator VectorListHybrid<T>::cbegin() const
 {
-	return VectorListHybrid<T>::const_VLHIterator(*this);
+	return VectorListHybrid<T>::const_iterator(*this);
 }
 
-template<typename T>
-inline typename VectorListHybrid<T>::const_VLHIterator VectorListHybrid<T>::cend() const
+template <typename T>
+inline typename VectorListHybrid<T>::const_iterator VectorListHybrid<T>::cend() const
 {
 	if (VectorListHybrid<T>::determineBlock(_size) == VectorListHybrid<T>::_blocksUsed)
-		return VectorListHybrid<T>::const_VLHIterator(*this, _blocksUsed, 0);
+		return VectorListHybrid<T>::const_iterator(*this, _blocksUsed, 0);
 	else
-		return VectorListHybrid<T>::const_VLHIterator(*this, _blocksUsed - 1, _size - (1 << (_blocksUsed - 1)) + 1);
+		return VectorListHybrid<T>::const_iterator(*this, _blocksUsed - 1, _size - (1 << (_blocksUsed - 1)) + 1);
 }
 
-template<typename T>
+template <typename T>
 T& VectorListHybrid<T>::operator[](const int& var)
 {
 	int inBlock = determineBlock(var);
-	if (var >= _size)
-		throw std::exception("Index out of range");
-
+	if (var >= _size || var < 0)
+		throw std::out_of_range("VLH subscript out of range.");
 	return data[inBlock][var - (1 << inBlock) + 1];
 }
 
-template<typename T>
+template <typename T>
 int VectorListHybrid<T>::size()
 {
 	return _size;
 }
 
-template<typename T>
-inline VectorListHybrid<T>::VLHIterator::VLHIterator(const VectorListHybrid<T>& vhl) : vlh(vhl), p(&vhl.data[0][0]), inBlock(0), inSet(0) {}
+template <typename T>
+template <typename U>
+inline VectorListHybrid<T>::VLHIterator<U>::VLHIterator(const VectorListHybrid<T>& vhl) : vlh(vhl), p(&vhl.data[0][0]), inBlock(0), inSet(0) {}
 
-template<typename T>
-inline VectorListHybrid<T>::VLHIterator::VLHIterator(const typename VectorListHybrid<T>::VLHIterator& vlht) : vlh(vlht.vlh), p(vlht.p), inBlock(vlht.inBlock), inSet(vlht.inSet) {}
+template <typename T>
+template <typename U>
+inline VectorListHybrid<T>::VLHIterator<U>::VLHIterator(const typename VectorListHybrid<T>::VLHIterator<U>& vlht) : vlh(vlht.vlh), p(vlht.p), inBlock(vlht.inBlock), inSet(vlht.inSet) {}
 
-template<typename T>
-inline VectorListHybrid<T>::VLHIterator::VLHIterator(const VectorListHybrid<T>& vlht, int inBlock, int inSet) : vlh(vlht), p(&vlht.data[inBlock][inSet]), inBlock(inBlock), inSet(inSet) {}
+template <typename T>
+template <typename U>
+inline VectorListHybrid<T>::VLHIterator<U>::VLHIterator(const VectorListHybrid<T>& vlht, int inBlock, int inSet) : vlh(vlht), p(&vlht.data[inBlock][inSet]), inBlock(inBlock), inSet(inSet) {}
 
 
-template<typename T>
-typename VectorListHybrid<T>::VLHIterator& VectorListHybrid<T>::VLHIterator::operator++()
+template <typename T>
+template <typename U>
+typename VectorListHybrid<T>::VLHIterator<U>& VectorListHybrid<T>::VLHIterator<U>::operator++()
 {
 	inSet++;
 	if ((1 << inBlock) == inSet)
@@ -448,34 +445,40 @@ typename VectorListHybrid<T>::VLHIterator& VectorListHybrid<T>::VLHIterator::ope
 	return *this;
 }
 
-template<typename T>
-typename VectorListHybrid<T>::VLHIterator VectorListHybrid<T>::VLHIterator::operator++(int)
+
+template <typename T>
+template <typename U>
+typename VectorListHybrid<T>::VLHIterator<U> VectorListHybrid<T>::VLHIterator<U>::operator++(int)
 {
-	VLHIterator tmp(*this);
+	VLHIterator<U> tmp(*this);
 	VLHIterator::operator++();
 	return tmp;
 }
 
-template<typename T>
-bool VectorListHybrid<T>::VLHIterator::operator==(const VLHIterator & rhs)
+template <typename T>
+template <typename U>
+bool VectorListHybrid<T>::VLHIterator<U>::operator==(const VLHIterator& rhs)
 {
 	return p == rhs;
 }
 
-template<typename T>
-bool VectorListHybrid<T>::VLHIterator::operator!=(const VLHIterator & rhs)
+template <typename T>
+template <typename U>
+bool VectorListHybrid<T>::VLHIterator<U>::operator!=(const VLHIterator & rhs)
 {
 	return p != rhs.p;
 }
 
-template<typename T>
-int & VectorListHybrid<T>::VLHIterator::operator*()
+template <typename T>
+template <typename U>
+U& VectorListHybrid<T>::VLHIterator<U>::operator*()
 {
 	return *p;
 }
 
-template<typename T>
-VectorListHybrid<T>::VLHIterator::~VLHIterator()
+template <typename T>
+template <typename U>
+VectorListHybrid<T>::VLHIterator<U>::~VLHIterator()
 {
 
 }
