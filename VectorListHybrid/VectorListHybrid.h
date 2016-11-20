@@ -1,13 +1,28 @@
 #pragma once
 #include <stdexcept>
 
+
+#if defined(__GNUG__)
+int clz(unsigned int x)
+{
+	return __builtin_clz(x);
+}
+int clz(unsigned long x)
+{
+	return __builtin_clzl(x);
+}
+
+
+#endif
+
+
 template <typename T>
 class VectorListHybrid
 {
 private:
 	T **data;
 
-	const int DEFAULT_CAPACITY = 16;
+	const size_t DEFAULT_CAPACITY = 4;
 	size_t _capacity;
 	size_t _size;
 	size_t _blocksUsed;
@@ -17,26 +32,25 @@ private:
 
 public:
 	VectorListHybrid();
-	VectorListHybrid(int);
+	VectorListHybrid(size_t);
 	~VectorListHybrid();
 	VectorListHybrid(const VectorListHybrid&);
 	VectorListHybrid& operator=(const VectorListHybrid&);
-
 
 	void push_back(const T&);
 	void pop_back();
 	T& front();
 	T& back();
 
-	void resize(const int& newsize, const T& var);
-	void resize(const int& newsize);
-	void reserve(const int&);
+	void resize(const size_t& newsize, const T& var);
+	void resize(const size_t& newsize);
+	void reserve(const size_t&);
 	void shrink_to_fit();
 	void clear();
 	bool empty();
 
-	T& operator[](const int&);
-	int size();
+	T& operator[](const size_t&);
+	size_t size();
 	template <typename U>
 	class VLHIterator : public std::iterator<std::input_iterator_tag, VectorListHybrid<T> >
 	{
@@ -78,7 +92,7 @@ inline size_t VectorListHybrid<T>::toPowerOf2(size_t n)
 	_BitScanReverse(&power, n);
 	return 1U << (power + 1);
 #elif defined(__GNUG__)
-	return (__builtin_popcount(n) == 1) ? n : 1U << (8 * sizeof(size_t) - __builtin_clz(n));
+	return (__builtin_popcount(n) == 1) ? n : 1U << (8 * sizeof(size_t) - clz(n));
 #else
 
 	index += 1;
@@ -87,7 +101,7 @@ inline size_t VectorListHybrid<T>::toPowerOf2(size_t n)
 	{
 		index >>= 1;
 		counter++;
-}
+	}
 	return counter;
 #endif 
 	return size_t();
@@ -101,7 +115,7 @@ inline size_t VectorListHybrid<T>::determineBlock(size_t index)
 	_BitScanReverse(&block, index + 1);
 	return block;
 #elif defined(__GNUG__)
-	return (sizeof(index) * 8 - __builtin_clz(index + 1) - 1);
+	return (sizeof(index) * 8 - clz(index + 1) - 1);
 #else
 
 	index += 1;
@@ -121,28 +135,32 @@ VectorListHybrid<T>::VectorListHybrid()
 	_capacity = DEFAULT_CAPACITY;
 	data = new T*[_capacity];
 
-	for (size_t i = 0; i < _capacity; i++)
-		data[i] = nullptr;
-
 	_size = 0;
 	_blocksUsed = 0;
 	_blocksReserved = 0;
 }
 
 template <typename T>
-VectorListHybrid<T>::VectorListHybrid(int capacity)
+VectorListHybrid<T>::VectorListHybrid(size_t maxsize)
 {
-	_size = 0;
-	_blocksUsed = 0;
+	if (maxsize < 2)
+		maxsize = 2;
+
 	_blocksReserved = 0;
+	_blocksUsed = 0;
+	_size = 0;
+
+	size_t newBlock = determineBlock(maxsize - 1) + 1;
+	size_t newCapacity = toPowerOf2(newBlock);
+	data = new T*[newCapacity];
+	_capacity = newCapacity;
 
 
-	_capacity = toPowerOf2(capacity);
-
-
-	data = new T*[_capacity];
-	for (size_t i = 0; i < _capacity; i++)
-		data[i] = nullptr;
+	while (newBlock > _blocksReserved)
+	{
+		data[_blocksReserved] = new T[1U << _blocksReserved];
+		_blocksReserved++;
+	}
 }
 
 template <typename T>
@@ -151,6 +169,7 @@ VectorListHybrid<T>::~VectorListHybrid()
 	for (size_t i = 0; i < _blocksReserved; i++)
 	{
 		delete[] data[i];
+
 	}
 
 	delete[] data;
@@ -207,9 +226,6 @@ void VectorListHybrid<T>::push_back(const T& var)
 			for (size_t i = 0; i < _capacity; i++)
 				data[i] = tmp_data[i];
 
-			for (size_t i = _capacity; i < _capacity * 2; i++)
-				data[i] = nullptr;
-
 			delete[] tmp_data;
 			_capacity *= 2;
 		}
@@ -222,8 +238,8 @@ void VectorListHybrid<T>::push_back(const T& var)
 		_blocksUsed++;
 
 	_size++;
-	//std::cout << "Size: " << _size << " ->[" << inBlock << "][" << (_size - (1 << inBlock)) << "]" << std::endl;
-	//std::cout << "Pushback Blocks used: " << _blocksUsed << "\tBlocks reserved: " << _blocksReserved << std::endl << std::endl;
+	//	std::cout << "Size: " << _size << " ->[" << inBlock << "][" << (_size - (1 << inBlock)) << "]" << std::endl;
+	//	std::cout << "Pushback Blocks used: " << _blocksUsed << "\tBlocks reserved: " << _blocksReserved << std::endl << std::endl;
 	data[inBlock][_size - (1 << inBlock)] = var;
 
 }
@@ -233,6 +249,7 @@ inline void VectorListHybrid<T>::pop_back()
 {
 	if (_size == 0)
 		throw std::length_error("Empty!");
+
 	_size--;
 }
 
@@ -255,15 +272,14 @@ inline T& VectorListHybrid<T>::back()
 }
 
 template <typename T>
-void VectorListHybrid<T>::resize(const int&newsize, const T& var)
+void VectorListHybrid<T>::resize(const size_t& newsize, const T& var)
 {
 	if (newsize < _size)
 	{
-		int newBlock = determineBlock(newsize - 1);
+		size_t newBlock = determineBlock(newsize - 1);
 		for (size_t i = newBlock + 1; i < _blocksReserved; i++)
 		{
 			delete[] data[i];
-			data[i] = nullptr;
 		}
 		_blocksUsed = newBlock + 1;
 		_blocksReserved = newBlock + 1;
@@ -273,10 +289,10 @@ void VectorListHybrid<T>::resize(const int&newsize, const T& var)
 
 	if (newsize > _size)
 	{
-		int newBlock = determineBlock(newsize - 1);
+		size_t newBlock = determineBlock(newsize - 1);
 		if (newBlock >= _capacity)
 		{
-			int newCapacity = toPowerOf2(newBlock);
+			size_t newCapacity = toPowerOf2(newBlock);
 
 			T **tmp_data;
 			tmp_data = data;
@@ -284,9 +300,6 @@ void VectorListHybrid<T>::resize(const int&newsize, const T& var)
 
 			for (size_t i = 0; i < _capacity; i++)
 				data[i] = tmp_data[i];
-
-			for (size_t i = _capacity; i < newCapacity; i++)
-				data[i] = nullptr;
 
 			delete[] tmp_data;
 			_capacity = newCapacity;
@@ -311,18 +324,18 @@ void VectorListHybrid<T>::resize(const int&newsize, const T& var)
 }
 
 template <typename T>
-inline void VectorListHybrid<T>::resize(const int & newsize)
+inline void VectorListHybrid<T>::resize(const size_t& newsize)
 {
 	resize(newsize, 0);
 }
 
 template <typename T>
-void VectorListHybrid<T>::reserve(const int & maxsize)
+void VectorListHybrid<T>::reserve(const size_t& maxsize)
 {
-	int newBlock = determineBlock(maxsize - 1);
-	if (newBlock >= _capacity)
+	size_t newBlock = determineBlock(maxsize - 1) + 1;
+	if (newBlock > _capacity)
 	{
-		int newCapacity = toPowerOf2(newBlock);
+		size_t newCapacity = toPowerOf2(newBlock);
 
 		T **tmp_data;
 		tmp_data = data;
@@ -331,13 +344,10 @@ void VectorListHybrid<T>::reserve(const int & maxsize)
 		for (size_t i = 0; i < _capacity; i++)
 			data[i] = tmp_data[i];
 
-		for (size_t i = _capacity; i < newCapacity; i++)
-			data[i] = nullptr;
-
 		delete[] tmp_data;
 		_capacity = newCapacity;
 	}
-	while (determineBlock(maxsize - 1) >= _blocksReserved)
+	while (newBlock > _blocksReserved)
 	{
 		data[_blocksReserved] = new T[1 << _blocksReserved];
 		_blocksReserved++;
@@ -351,7 +361,6 @@ void VectorListHybrid<T>::shrink_to_fit()
 	for (size_t i = _blocksUsed; i < _blocksReserved; i++)
 	{
 		delete[] data[i];
-		data[i] = nullptr;
 	}
 	_blocksReserved = _blocksUsed;
 }
@@ -401,7 +410,7 @@ inline typename VectorListHybrid<T>::const_iterator VectorListHybrid<T>::cend() 
 }
 
 template <typename T>
-T& VectorListHybrid<T>::operator[](const int& var)
+T& VectorListHybrid<T>::operator[](const size_t& var)
 {
 	size_t inBlock = determineBlock(var);
 	if (var >= _size || var < 0)
@@ -410,7 +419,7 @@ T& VectorListHybrid<T>::operator[](const int& var)
 }
 
 template <typename T>
-inline int VectorListHybrid<T>::size()
+inline size_t VectorListHybrid<T>::size()
 {
 	return _size;
 }
