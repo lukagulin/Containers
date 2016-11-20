@@ -3,6 +3,8 @@
 
 int main()
 {
+
+
 	VectorListHybrid<int> prvi(2);
 	for (int i = 0; i < 1452; i++)
 	{
